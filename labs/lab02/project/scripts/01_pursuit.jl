@@ -14,8 +14,9 @@ script_name = splitext(basename(PROGRAM_FILE))[1]
 mkpath(plotsdir(script_name))
 mkpath(datadir(script_name))
 
-k = 6.0
-n = 2.0
+k = 19.0
+n = 5.1
+v = 1.0
 
 function pursuit_ode!(du, u, p, θ)
     n = p
