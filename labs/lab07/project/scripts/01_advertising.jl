@@ -1,0 +1,110 @@
+# # Модель распространения рекламы
+#
+# **Вариант 38:** N = 1130, n(0) = 11.
+# Рассматриваются три модели: платная реклама + сарафанное радио,
+# только платная реклама, только сарафанное радио.
+
+using DrWatson
+@quickactivate "project"
+
+using DifferentialEquations
+using Plots
+using DataFrames
+using JLD2
+
+script_name = splitext(basename(PROGRAM_FILE))[1]
+mkpath(plotsdir(script_name))
+mkpath(datadir(script_name))
+
+# ## Параметры
+
+N = 1130.0
+n0 = 11.0
+tspan = (0.0, 30.0)
+u0 = [n0]
+
+# ## Модель 1: платная реклама + сарафанное радио
+# dn/dt = (0.25 + 0.000075·n)·(N - n)
+
+function model1!(du, u, p, t)
+    n = u[1]
+    du[1] = (0.25 + 0.000075 * n) * (N - n)
+end
+
+prob1 = ODEProblem(model1!, u0, tspan)
+sol1 = solve(prob1, Tsit5(), saveat=0.05)
+
+# ## Модель 2: только платная реклама (α₁ велико, α₂ мало)
+# dn/dt = (0.000075 + 0.25·n)·(N - n)
+
+function model2!(du, u, p, t)
+    n = u[1]
+    du[1] = (0.000075 + 0.25 * n) * (N - n)
+end
+
+prob2 = ODEProblem(model2!, u0, tspan)
+sol2 = solve(prob2, Tsit5(), saveat=0.05)
+
+# ## Модель 3: платная реклама (sin) + сарафанное радио (t·n)
+# dn/dt = (0.25·sin(t) + 0.75·t·n)·(N - n)
+
+function model3!(du, u, p, t)
+    n = u[1]
+    du[1] = (0.25 * sin(t) + 0.75 * t * n) * (N - n)
+end
+
+prob3 = ODEProblem(model3!, u0, tspan)
+sol3 = solve(prob3, Tsit5(), saveat=0.05)
+
+# ## Анализ максимума скорости роста для модели 2
+
+v2 = [ (0.000075 + 0.25 * sol2.u[i][1]) * (N - sol2.u[i][1]) for i in 1:length(sol2.t) ]
+idx_max = argmax(v2)
+t_max = sol2.t[idx_max]
+v_max = v2[idx_max]
+
+println("=== Вариант 38 ===")
+println("N = ", N, ", n(0) = ", n0)
+println()
+println("Модель 2 (только платная реклама):")
+println("  Максимум скорости в момент t = ", round(t_max, digits=3))
+println("  Значение максимума = ", round(v_max, digits=2))
+println()
+println("Финальные значения:")
+println("  Модель 1: n(30) = ", round(last(sol1.u)[1], digits=2))
+println("  Модель 2: n(30) = ", round(last(sol2.u)[1], digits=2))
+println("  Модель 3: n(30) = ", round(last(sol3.u)[1], digits=2))
+
+# ## Графики
+
+p1 = plot(sol1, label="n(t)",
+          title="Модель 1: платная + сарафан",
+          xlabel="t", ylabel="n(t)", lw=2, color=:blue)
+savefig(plotsdir(script_name, "model1.png"))
+
+p2 = plot(sol2, label="n(t)",
+          title="Модель 2: только платная",
+          xlabel="t", ylabel="n(t)", lw=2, color=:red)
+vline!(p2, [t_max], linestyle=:dash, color=:black,
+       label="Максимум скорости (t=$(round(t_max, digits=2)))")
+savefig(plotsdir(script_name, "model2.png"))
+
+p3 = plot(sol3, label="n(t)",
+          title="Модель 3: платная(sin) + сарафан(t·n)",
+          xlabel="t", ylabel="n(t)", lw=2, color=:green)
+savefig(plotsdir(script_name, "model3.png"))
+
+# Сводный график
+pall = plot(sol1, sol2, sol3, layout=(3,1), size=(900, 1000),
+            label=["Модель 1" "Модель 2" "Модель 3"])
+savefig(plotsdir(script_name, "models_all.png"))
+
+# ## Сохранение
+
+df1 = DataFrame(t=sol1.t, n=first.(sol1.u))
+df2 = DataFrame(t=sol2.t, n=first.(sol2.u))
+df3 = DataFrame(t=sol3.t, n=first.(sol3.u))
+
+@save datadir(script_name, "advertising_results.jld2") df1 df2 df3 sol1 sol2 sol3
+
+println("\nСохранено в plots/$(script_name)/ и data/$(script_name)/")
