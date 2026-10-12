@@ -6,9 +6,12 @@
   "repository": "https://github.com/aminoooo03/2026-1--study--mathmod.git",
   "author": "nakovaamina <nakovaamina3@gmail.com>",
   "license": "CC-BY-4.0",
-    "config": {
-	"commitizen": {
-	    "path": "cz-customizable"
-	}
+  "config": {
+    "commitizen": {
+      "path": "cz-customizable"
     }
+  },
+  "dependencies": {
+    "puppeteer": "^25.13.0"
+  }
 }
