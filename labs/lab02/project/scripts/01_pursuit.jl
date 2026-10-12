@@ -1,0 +1,70 @@
+# # Задача преследования браконьеров береговой охраной
+#
+# **Цель:** построить траекторию катера, догоняющего лодку браконьеров.
+
+using DrWatson
+@quickactivate "project"
+
+using DifferentialEquations
+using Plots
+using DataFrames
+using JLD2
+
+script_name = splitext(basename(PROGRAM_FILE))[1]
+mkpath(plotsdir(script_name))
+mkpath(datadir(script_name))
+
+k = 6.0
+n = 2.0
+
+function pursuit_ode!(du, u, p, θ)
+    n = p
+    r = u[1]
+    du[1] = r / sqrt(n^2 - 1)
+end
+
+x1 = k / 3
+u0_1 = [x1]
+θspan = (0.0, 4π)
+
+prob1 = ODEProblem(pursuit_ode!, u0_1, θspan, n)
+sol1 = solve(prob1, Tsit5(), saveat=0.05)
+
+x2 = k
+u0_2 = [x2]
+prob2 = ODEProblem(pursuit_ode!, u0_2, θspan, n)
+sol2 = solve(prob2, Tsit5(), saveat=0.05)
+
+function polar_to_cart(sol)
+    r = first.(sol.u)
+    θ = sol.t
+    x = r .* cos.(θ)
+    y = r .* sin.(θ)
+    return x, y
+end
+
+x1_cart, y1_cart = polar_to_cart(sol1)
+x2_cart, y2_cart = polar_to_cart(sol2)
+
+φ = atan(sqrt(n^2 - 1))
+t_boat = 0:0.05:20
+x_boat = t_boat .* cos(φ)
+y_boat = t_boat .* sin(φ)
+
+p = plot(aspect_ratio=:equal, xlabel="x", ylabel="y",
+         title="Задача преследования (n = $n)", legend=:bottomright)
+plot!(p, x1_cart, y1_cart, label="Катер 1", lw=2, color=:blue)
+plot!(p, x2_cart, y2_cart, label="Катер 2", lw=2, color=:red)
+plot!(p, x_boat, y_boat, label="Лодка", lw=2, color=:green, linestyle=:dash)
+scatter!(p, [0], [0], label="Полюс", markersize=6, color=:black)
+
+savefig(plotsdir(script_name, "pursuit_trajectory.png"))
+
+df = DataFrame(θ=sol1.t, r_case1=first.(sol1.u), r_case2=first.(sol2.u))
+println("Первые 5 строк:")
+println(first(df, 5))
+println("\nПараметры: k = ", k, ", n = ", n)
+println("x1 = ", x1, ", x2 = ", x2)
+println("φ = ", round(φ, digits=4))
+
+@save datadir(script_name, "pursuit_results.jld2") df sol1 sol2
