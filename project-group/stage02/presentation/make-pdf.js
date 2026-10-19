@@ -11,14 +11,14 @@ const path = require('path');
   const page = await browser.newPage();
   await page.setViewport({ width: 1280, height: 720 });
 
-  const htmlPath = path.join(process.cwd(), '_output', 'mathmod-lab08-presentation.html');
+  const htmlPath = path.join(process.cwd(), '_output', 'mathmod-project-group-stage02-presentation.html');
   const url = `file:///${htmlPath.replace(/\\/g, '/')}?print-pdf`;
 
   console.log('Открываю:', url);
   await page.goto(url, { waitUntil: 'networkidle0', timeout: 60000 });
   await new Promise(r => setTimeout(r, 5000));
 
-  const pdfPath = path.join(process.cwd(), '_output', 'mathmod-lab08-presentation.pdf');
+  const pdfPath = path.join(process.cwd(), '_output', 'mathmod-project-group-stage02-presentation.pdf');
   await page.pdf({
     path: pdfPath,
     width: '1280px',
